@@ -1,0 +1,15 @@
+services:
+  analysis:
+    image: tumorcast-r:2026-10-16
+    build:
+      context: "."
+      dockerfile: Dockerfile
+    working_dir: /work/TUMORCAST
+    command: ["sleep", "infinity"]
+    init: true
+    shm_size: 1gb
+    volumes:
+      - ..:/work
+      - ../.codex_state:/root/.codex
+    environment:
+      TZ: Etc/UTC

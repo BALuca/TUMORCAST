@@ -8,7 +8,7 @@ suppressPackageStartupMessages({
 })
 
 raw_dir <- "data/raw/ligand_assays"
-output_dir <- "results/123_prepare_ligand_assays"
+output_dir <- "results/10_prepare_ligand_assays"
 outcome_path <- "data/processed/her2_ligand_outcomes.tsv"
 target_doses <- c(0.5, 5)
 comparison_tolerance <- 1e-10

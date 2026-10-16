@@ -1,0 +1,5 @@
+**
+!Dockerfile
+!env/
+!env/renv.lock
+!env/install_packages.R

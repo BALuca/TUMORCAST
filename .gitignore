@@ -5,6 +5,8 @@
 /reference/figures/
 /reference/results/
 /reference/inputs/
+/reference/cleanup_removed_previews.tsv
+/reference/code/**/*.tsv
 /renv/library/
 /renv/staging/
 .Rhistory

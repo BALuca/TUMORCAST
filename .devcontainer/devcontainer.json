@@ -1,0 +1,13 @@
+{
+  "name": "TUMORCAST R",
+  "dockerComposeFile": "../compose.yaml",
+  "service": "analysis",
+  "workspaceFolder": "/work/TUMORCAST",
+  "remoteUser": "root",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "extensions": ["REditorSupport.r", "openai.chatgpt"]
+    }
+  }
+}

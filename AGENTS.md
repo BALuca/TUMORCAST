@@ -15,6 +15,10 @@ and code are evidence of previous analyses, not additional layers of live rules.
   before use. Existing historical Python code is not an exception.
 - Keep this a simple bioinformatics project. Do not introduce data registries,
   workflow frameworks, wrapper stacks, generated pipelines or custom object systems.
+- Git contains code, documentation and environment configuration only. Keep all
+  data, scientific tables, models, generated figures and private state out of Git.
+  Do not commit or push unless the user explicitly instructs you to do so.
+  The remote for this project is `https://github.com/BALuca/TUMORCAST.git`.
 
 ## Readable code
 
@@ -40,14 +44,16 @@ and code are evidence of previous analyses, not additional layers of live rules.
   holds disposable scratch work. `reference/` holds accepted originals and history.
 - Explain data origins and execution order briefly in `README.md` and in scripts.
   Do not create a separate metadata or dependency-management system.
-- Preserve historical scientific script identifiers where their analysis is being
-  reorganized without changing its method. New scientific iterations continue
-  after 145 with matching numbered folders directly under `results/`. Preparation
-  stages can use their own clearly identified execution order. Plot variants stay
-  in the existing analysis folder. Preserve prior scripts and results.
-- Save final figures, their necessary source tables, reusable fitted objects and
-  diagnostics needed to assess the science. Keep cheap joins and temporary subsets
-  in memory. Save an intermediate only for inspection, reuse or substantial time saved.
+- This new project has one clean execution sequence beginning at `01`.
+  Script prefixes describe execution order, not inherited historical analysis IDs.
+  Match scientific result folders to these numbered scripts. Historical versions
+  stay in `reference/code/` and `reference/results/`. Preserve new iterations
+  as distinct numbered scripts and outputs; plot variants stay with their analysis.
+- Keep older analyses reproducible when shared functions change. Preserve their
+  version-specific behavior rather than silently changing their computations.
+- Save every scientific intermediate result from raw preparation through program
+  generation, fitted models, diagnostics, figure source tables and final figures. Keep
+  cheap temporary joins in memory; they must remain explicit and reproducible in code.
 - Prefer qs for substantial R objects and TSV/TSV.gz for tables. Base R RDS is
   appropriate for small caches. Keep one clear format for each scientific object.
 - Cache long-running steps with the relevant input and code fingerprints,

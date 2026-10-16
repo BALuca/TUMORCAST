@@ -1,5 +1,5 @@
 # ============================================================================
-# File: src/R/lib_heatmap.R
+# Retained wrapper from src/R/lib_heatmap.R, with shared project diagnostics below.
 suppressPackageStartupMessages({
   library(ComplexHeatmap)
   library(circlize)
@@ -8,6 +8,20 @@ suppressPackageStartupMessages({
   library(RColorBrewer)
   library(viridisLite)
 })
+
+# Established signed-value palette shared by project heatmaps.
+hm_value_colors <- c("#006aff", "#0068fe", "#0066fc", "#0063fa", "#0061f8", "#005ff6", "#005df4", "#005af2",
+    "#0058f0", "#0056ee", "#0054ec", "#0052ea", "#004fe8", "#004de6", "#004be4", "#0049e2", "#0046e0",
+    "#0045de", "#0044dd", "#0042db", "#0041d9", "#0040d8", "#003fd6", "#003ed4", "#003dd3", "#003cd1",
+    "#003bcf", "#003ace", "#0039cc", "#0038ca", "#0037c9", "#0036c7", "#0034c5", "#0033c4", "#0131ba",
+    "#0c2eae", "#132ca1", "#172995", "#192688", "#1b247c", "#1c2170", "#1c1f65", "#1b1c59", "#1a1a4e",
+    "#191743", "#171539", "#15122e", "#130e25", "#100a1b", "#080511", "#000000", "#121205", "#1d1e0a",
+    "#26290e", "#30360f", "#3b4210", "#464f0f", "#515c0e", "#5c6a0c", "#677807", "#738601", "#7f9500",
+    "#8ba400", "#97b300", "#a4c200", "#b1d200", "#bde100", "#c6ec00", "#c8ee00", "#c9ef00", "#caf000",
+    "#cbf100", "#ccf300", "#cef400", "#cff500", "#d0f600", "#d1f800", "#d2f900", "#d4fa00", "#d5fc00",
+    "#d6fd00", "#d7fe00", "#d8ff00", "#daff00", "#dbff00", "#ddff00", "#dfff00", "#e0ff00", "#e2ff00",
+    "#e4ff00", "#e6ff00", "#e7ff00", "#e9ff00", "#ebff00", "#edff02", "#eeff07", "#f0ff0b", "#f2ff0e",
+    "#f4ff12", "#f5ff14", "#f7ff17")
 
 # ------- Discrete palettes (self-contained) ----------------------------------
 # draw_heatmap() uses map_discrete()/safe_factor() for annotations. These helpers
@@ -166,20 +180,9 @@ draw_heatmap <- function(
         value_range <- c(v - delta, v, v + delta)
         value_colors <- viridisLite::viridis(3)
       } else if (isTRUE(any(mat_plot < 0, na.rm = TRUE) && any(mat_plot > 0, na.rm = TRUE))) {
-        # Diverging values: keep 0 as a neutral midpoint (WHITE, not black).
+        # Diverging values: use the established blue-black-yellow palette.
         max_abs <- max(abs(rng))
-        value_colors <- c("#006aff", "#0068fe", "#0066fc", "#0063fa", "#0061f8", "#005ff6", "#005df4", "#005af2", 
-            "#0058f0", "#0056ee", "#0054ec", "#0052ea", "#004fe8", "#004de6", "#004be4", "#0049e2", "#0046e0", 
-            "#0045de", "#0044dd", "#0042db", "#0041d9", "#0040d8", "#003fd6", "#003ed4", "#003dd3", "#003cd1", 
-            "#003bcf", "#003ace", "#0039cc", "#0038ca", "#0037c9", "#0036c7", "#0034c5", "#0033c4", "#0131ba", 
-            "#0c2eae", "#132ca1", "#172995", "#192688", "#1b247c", "#1c2170", "#1c1f65", "#1b1c59", "#1a1a4e", 
-            "#191743", "#171539", "#15122e", "#130e25", "#100a1b", "#080511", "#000000", "#121205", "#1d1e0a", 
-            "#26290e", "#30360f", "#3b4210", "#464f0f", "#515c0e", "#5c6a0c", "#677807", "#738601", "#7f9500", 
-            "#8ba400", "#97b300", "#a4c200", "#b1d200", "#bde100", "#c6ec00", "#c8ee00", "#c9ef00", "#caf000", 
-            "#cbf100", "#ccf300", "#cef400", "#cff500", "#d0f600", "#d1f800", "#d2f900", "#d4fa00", "#d5fc00", 
-            "#d6fd00", "#d7fe00", "#d8ff00", "#daff00", "#dbff00", "#ddff00", "#dfff00", "#e0ff00", "#e2ff00", 
-            "#e4ff00", "#e6ff00", "#e7ff00", "#e9ff00", "#ebff00", "#edff02", "#eeff07", "#f0ff0b", "#f2ff0e", 
-            "#f4ff12", "#f5ff14", "#f7ff17")
+        value_colors <- hm_value_colors
         value_range <- seq(-max_abs, max_abs, length.out = length(value_colors))
       } else {
         value_range <- c(rng[1], mean(rng), rng[2])
@@ -353,4 +356,81 @@ draw_heatmap <- function(
   )
 
   hm
+}
+
+# Reused by scientific scatterplots; comparisons retain their own endpoint and
+# grouping axis in the calling script. Axes may use independent ranges.
+correlation_label <- function(x, y) {
+  keep <- is.finite(x) & is.finite(y)
+  x <- x[keep]
+  y <- y[keep]
+  if (length(x) < 3L || sd(x) == 0 || sd(y) == 0) {
+    return(sprintf("r = NA\nP = NA; n = %d", length(x)))
+  }
+  test <- cor.test(x, y, method = "pearson")
+  sprintf("r = %.2f\nP = %s; n = %d", unname(test$estimate),
+    format.pval(test$p.value, digits = 2, eps = 0.0001), length(x))
+}
+
+# Assign features by their within-versus-outside-class mean difference. The
+# returned order is explicit and deterministic; heatmaps must not recluster it.
+block_row_order <- function(matrix, classes) {
+  classes <- as.character(classes)
+  stopifnot(length(classes) == ncol(matrix), !anyNA(classes))
+  groups <- sort(unique(classes))
+  stopifnot(length(groups) >= 2L)
+  delta <- vapply(groups, function(group) {
+    rowMeans(matrix[, classes == group, drop = FALSE]) -
+      rowMeans(matrix[, classes != group, drop = FALSE])
+  }, numeric(nrow(matrix)))
+  assignment <- max.col(delta, ties.method = 'first')
+  strength <- delta[cbind(seq_len(nrow(matrix)), assignment)]
+  list(order = order(assignment, -strength, rownames(matrix)),
+    assignment = groups[assignment], delta = strength)
+}
+
+# Reused by signature learning and the single-drug bridge. Display changes do
+# not alter training templates, route assignments, coefficients or predictions.
+plot_training_signatures <- function(template, drug_labels, doses, label,
+                                     included = seq_len(ncol(template$correlations))) {
+  observed <- template$correlations[, included, drop = FALSE]
+  route <- template$membership[included]
+  row_blocks <- block_row_order(observed, route)
+  within_score <- vapply(seq_len(ncol(observed)), function(j) {
+    mean(observed[row_blocks$assignment == as.character(route[j]), j])
+  }, numeric(1))
+  column_order <- order(route, -within_score, colnames(observed))
+  row_order <- row_blocks$order
+  observed <- observed[row_order, column_order, drop = FALSE]
+  annotation <- data.frame(
+    Signature = paste('Signature', route[column_order]),
+    Dose = paste(doses[included][column_order], 'uM'),
+    row.names = colnames(observed)
+  )
+  stopifnot(identical(colnames(observed), rownames(annotation)))
+  breaks <- seq(-1, 1, length.out = length(hm_value_colors))
+  left <- draw_heatmap(observed, scale_rows = FALSE,
+    value_range = breaks, value_colors = hm_value_colors, hm_name = 'Training Pearson r',
+    col_anno_df = annotation, col_anno_cols = names(annotation),
+    show_row_names = TRUE, row_names_side = 'left', row_names_gp = grid::gpar(fontsize = 10),
+    show_column_names = TRUE, column_labels = drug_labels[included][column_order],
+    column_names_rot = 45, column_names_gp = grid::gpar(fontsize = 11),
+    width = grid::unit(105, 'mm'), height = grid::unit(145, 'mm'),
+    title = 'Observed training-cell correlations')
+  collapsed <- template$collapsed[row_order, , drop = FALSE]
+  right <- draw_heatmap(collapsed, scale_rows = FALSE,
+    value_range = breaks, value_colors = hm_value_colors, hm_name = 'Collapsed mean r',
+    show_row_names = FALSE, show_column_names = TRUE, column_names_rot = 45,
+    column_names_gp = grid::gpar(fontsize = 11), width = grid::unit(24, 'mm'),
+    height = grid::unit(145, 'mm'), title = 'Fixed signatures', show_heatmap_legend = FALSE)
+  drawn <- ComplexHeatmap::draw(left + right, heatmap_legend_side = 'right',
+    annotation_legend_side = 'right', merge_legends = TRUE,
+    ht_gap = grid::unit(8, 'mm'), column_title = label,
+    column_title_gp = grid::gpar(fontsize = 14), padding = grid::unit(c(18, 8, 14, 8), 'mm'))
+  stopifnot(identical(as.integer(ComplexHeatmap::row_order(drawn, name = 'Training Pearson r')),
+    seq_len(nrow(observed))))
+  grid::grid.text('Features ordered by within-versus-outside-signature mean difference. No row z-scoring.\nPositive correlations indicate greater sensitivity (-log2 abundance).',
+    x = 0.5, y = grid::unit(4, 'mm'), just = c('centre', 'bottom'),
+    gp = grid::gpar(fontsize = 10))
+  invisible(drawn)
 }
