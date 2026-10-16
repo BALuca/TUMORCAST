@@ -1,0 +1,12 @@
+/data/
+/results/
+/tmp/
+/reference/bundles/
+/reference/figures/
+/reference/results/
+/reference/inputs/
+/renv/library/
+/renv/staging/
+.Rhistory
+.RData
+Rplots.pdf
